@@ -29,16 +29,65 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+
+  const usersCollection= client.db('assetManagement').collection('users')
+  const employeeCollection= client.db('assetManagement').collection('employees')
+
+
+
+
+  app.get('/user/:email',async(req,res)=>{
+    const email=req.params.email
+    const result = await usersCollection.findOne({email})
+    res.send(result)
+  })
+
+
+
+    
+app.put('/user',async(req,res)=>{
+    const user= req.body;
+    // check
+    const isExist=await usersCollection.findOne({email: user?.email})
+    if (isExist) return res.send(isExist)
+    const options={upsert: true}
+    const query={email: user?.email}
+    const updateDoc={
+        $set: {
+            ...user,
+            timestamp: Date.now(),
+        },
+    }
+    const result= await usersCollection.updateOne(query,updateDoc,options);
+    res.send(result)
+})
+
+app.put('/employee',async(req,res)=>{
+    const user= req.body;
+    // check
+    const isExist=await employeeCollection.findOne({email: user?.email})
+    if (isExist) return res.send(isExist)
+    const options={upsert: true}
+    const query={email: user?.email}
+    const updateDoc={
+        $set: {
+            ...user,
+           
+        },
+    }
+    const result= await employeeCollection.updateOne(query,updateDoc,options);
+    res.send(result)
+})
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
-
 
 
 
