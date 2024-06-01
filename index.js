@@ -1,6 +1,7 @@
 require('dotenv').config()
 const express = require('express');
 const cors=require('cors');
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app=express();
 const port= process.env.PORT || 5000;
@@ -32,6 +33,8 @@ async function run() {
 
   const usersCollection= client.db('assetManagement').collection('users')
   const employeeCollection= client.db('assetManagement').collection('employees')
+  const hrCollection= client.db('assetManagement').collection('hr')
+  const paymentCollection = client.db("assetManagement").collection("payments");
 
 
 
@@ -39,6 +42,11 @@ async function run() {
   app.get('/user/:email',async(req,res)=>{
     const email=req.params.email
     const result = await usersCollection.findOne({email})
+    res.send(result)
+  })
+  app.get('/hr/:email',async(req,res)=>{
+    const email=req.params.email
+    const result = await hrCollection.findOne({email})
     res.send(result)
   })
 
@@ -78,6 +86,79 @@ app.put('/employee',async(req,res)=>{
     const result= await employeeCollection.updateOne(query,updateDoc,options);
     res.send(result)
 })
+app.put('/hr',async(req,res)=>{
+    const user= req.body;
+    // check
+    const isExist=await hrCollection.findOne({email: user?.email})
+    if (isExist) return res.send(isExist)
+    const options={upsert: true}
+    const query={email: user?.email}
+    const updateDoc={
+        $set: {
+            ...user,
+           
+        },
+    }
+    const result= await hrCollection.updateOne(query,updateDoc,options);
+    res.send(result)
+})
+
+
+// Payment intent
+app.post("/create-payment-intent", async (req, res) => {
+  const { price } = req.body;
+  const amount=parseInt(price*100);
+  // console.log(amount,'amount inside the intent')
+
+  // Create a PaymentIntent with the order amount and currency
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: amount,
+    currency: "usd",
+    payment_method_types:['card']
+    // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+    // automatic_payment_methods: {
+    //   enabled: true,
+    // },
+  });
+
+  
+res.send({
+clientSecret: paymentIntent.client_secret
+});
+});
+
+
+  //payment related  api
+  app.get('/payments/:email',async(req,res)=>{
+    const query={email: req.params.email}
+    if(req.params.email !== req.decoded.email){
+      return res.status(403).send({message:'forbidden access'})
+    }
+    const result=await paymentCollection.find().toArray()
+    res.send(result)
+})
+
+  app.post('/payments',async(req,res)=>{
+    const payment=req.body;
+    const paymentResult= await paymentCollection.insertOne(payment);
+
+    // carefully delete each item from the cart
+    // console.log('payment info',payment);
+  
+    // const query= {_id:{
+    //   $in: payment.cartIds.map(id=> new ObjectId(id))
+    // }};
+    // const deleteResult= await cartCollection.deleteMany(query)
+    res.send(paymentResult)
+  })
+
+
+
+
+
+
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
