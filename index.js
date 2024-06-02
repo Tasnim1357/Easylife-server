@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 
-console.log(process.env.DB_USER)
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.cxnpdhc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -58,12 +58,28 @@ async function run() {
   })
 
 
+  app.get('/assets/:id',async(req,res) => {
+    const id = req.params.id;
+    const query={_id: new ObjectId(id)}
+    const result=await assetCollection.findOne(query);
+ 
+    res.send(result);
+})
+
 // post an asset
   app.post('/asset', async(req, res) => {
     const newAssets=req.body
     console.log(newAssets)
     const result=await assetCollection.insertOne(newAssets)
     res.send(result)
+  })
+
+  app.delete('/assets/:id',async(req,res)=>{
+    const id=  req.params.id;
+    const query={_id:new ObjectId(id)}
+    const result=await assetCollection.deleteOne(query);
+    res.send(result)
+
   })
     
 app.put('/user',async(req,res)=>{
