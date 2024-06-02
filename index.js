@@ -35,6 +35,7 @@ async function run() {
   const employeeCollection= client.db('assetManagement').collection('employees')
   const hrCollection= client.db('assetManagement').collection('hr')
   const paymentCollection = client.db("assetManagement").collection("payments");
+  const assetCollection = client.db("assetManagement").collection("assets");
 
 
 
@@ -50,8 +51,20 @@ async function run() {
     res.send(result)
   })
 
+  app.get('/assets', async(req, res) => {
+    const cursor= assetCollection.find()
+    const result=await cursor.toArray()
+    res.send(result)
+  })
 
 
+// post an asset
+  app.post('/asset', async(req, res) => {
+    const newAssets=req.body
+    console.log(newAssets)
+    const result=await assetCollection.insertOne(newAssets)
+    res.send(result)
+  })
     
 app.put('/user',async(req,res)=>{
     const user= req.body;
