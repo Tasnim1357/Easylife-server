@@ -51,11 +51,23 @@ async function run() {
     res.send(result)
   })
 
+
+
+
   app.get('/assets', async(req, res) => {
-    const cursor= assetCollection.find()
-    const result=await cursor.toArray()
-    res.send(result)
-  })
+    const page=parseInt(req.query.page)
+    const size=parseInt(req.query.size)
+   const result = await assetCollection.find()
+   .skip(page*size)
+   .limit(size)
+   .toArray();
+     res.send(result);
+ })
+
+ app.get('/productsCount', async(req, res) => {
+  const count = await assetCollection.estimatedDocumentCount();
+  res.send({count});
+})
 
 
   app.get('/assets/:id',async(req,res) => {
