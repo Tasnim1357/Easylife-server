@@ -74,6 +74,24 @@ async function run() {
     res.send(result)
   })
 
+  app.patch('/assets/:id',async(req,res)=>{
+    const asset=req.body;
+    const id= req.params.id;
+    const filter={_id:new ObjectId(id)
+    }
+    const updatedDoc={
+      $set:{
+        name: asset.name,
+        type: asset.type,
+        quantity: asset.quantity,
+        date: asset.date,
+        status: asset.status
+      }
+    }
+    const result=await assetCollection.updateOne(filter,updatedDoc);
+    res.send(result);
+  });
+
   app.delete('/assets/:id',async(req,res)=>{
     const id=  req.params.id;
     const query={_id:new ObjectId(id)}
