@@ -37,6 +37,7 @@ async function run() {
   const hrCollection= client.db('assetManagement').collection('hr')
   const paymentCollection = client.db("assetManagement").collection("payments");
   const assetCollection = client.db("assetManagement").collection("assets");
+  const requestCollection = client.db("assetManagement").collection("requested");
 
 
 
@@ -122,6 +123,114 @@ async function run() {
      res.send(result);
  })
 
+
+//  app.get('/assets/emp',async(req,res)=>{
+//   const result=await assetCollection.find().toArray()
+//   res.send(result)
+// })
+
+app.get('/request/:email', async (req, res) => {
+  const email = req.params.email;
+  const { search, type, status, page, size } = req.query;
+  
+  // Parse page and size to integers
+  const pageNum = parseInt(page, 10);
+  const pageSize = parseInt(size, 10);
+
+  // Build the query object
+  let query = { userEmail: email };
+
+  if (search) {
+    query.name = { $regex: search, $options: 'i' }; // Case-insensitive regex search
+  }
+
+  if (type) {
+    query.type = type;
+  }
+
+  if (status) {
+    query.status1 = status;
+  }
+
+  try {
+    const skip = pageNum * pageSize; // Calculate the number of documents to skip
+    const result = await requestCollection.find(query).skip(skip).limit(pageSize).toArray();
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: 'Internal Server Error', error });
+  }
+});
+
+
+app.get('/requestCount', async(req, res) => {
+  const { search, type, status } = req.query;
+  let query = {};
+
+  if (search) {
+    query.name = { $regex: search, $options: 'i' }; // Case-insensitive regex search
+  }
+  if (type) {
+    query.type = type;
+  }
+  const count = await requestCollection.estimatedDocumentCount(query);
+  res.send({count});
+})
+
+
+
+
+
+
+
+app.get('/assets/emp', async (req, res) => {
+  const { search, type, status } = req.query;
+  const page = parseInt(req.query.page);
+  const size = parseInt(req.query.size);
+  
+  // Build the query object
+  let query = {};
+
+  if (search) {
+    query.name = { $regex: search, $options: 'i' }; // Case-insensitive regex search
+  }
+  
+  if (type) {
+    query.type = type;
+  }
+  
+  if (status) {
+    query.status = status;
+  }
+
+  try {
+    const skip = page * size; // Calculate the number of documents to skip
+    const result = await assetCollection.find(query).skip(skip)
+      .limit(size)
+      .toArray();
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: 'Internal Server Error', error });
+  }
+});
+
+
+
+app.get('/assetsCount', async(req, res) => {
+  const { search, type, status } = req.query;
+  let query = {};
+
+  if (search) {
+    query.name = { $regex: search, $options: 'i' }; // Case-insensitive regex search
+  }
+  if (type) {
+    query.type = type;
+  }
+  const count = await assetCollection.estimatedDocumentCount(query);
+  res.send({count});
+})
+
+
+
  app.get('/productsCount', async(req, res) => {
   const count = await assetCollection.estimatedDocumentCount();
   res.send({count});
@@ -141,6 +250,12 @@ async function run() {
     const newAssets=req.body
     console.log(newAssets)
     const result=await assetCollection.insertOne(newAssets)
+    res.send(result)
+  })
+  app.post('/request', async(req, res) => {
+    const newRequest=req.body
+    console.log(newRequest)
+    const result=await requestCollection.insertOne(newRequest)
     res.send(result)
   })
 
@@ -166,6 +281,13 @@ async function run() {
     const id=  req.params.id;
     const query={_id:new ObjectId(id)}
     const result=await assetCollection.deleteOne(query);
+    res.send(result)
+
+  })
+  app.delete('/request/:id',async(req,res)=>{
+    const id=  req.params.id;
+    const query={_id:new ObjectId(id)}
+    const result=await requestCollection.deleteOne(query);
     res.send(result)
 
   })
