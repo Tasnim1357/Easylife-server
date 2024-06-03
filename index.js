@@ -1,6 +1,7 @@
 require('dotenv').config()
 const express = require('express');
 const cors=require('cors');
+const jwt= require('jsonwebtoken')
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app=express();
@@ -40,21 +41,78 @@ async function run() {
 
 
 
+ // middlewares
+
+ const verifyToken=(req, res,next)=>{
+  console.log('inside verify token',req.headers);
+  if(!req.headers.authorization){
+    return res.status(401).send({message: 'forbidden access'})
+  }
+  const token= req.headers.authorization.split(' ')[1];
+  
+  jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err, decoded)=>{
+    if(err){
+      return res.status(401).send({message: 'forbidden access'})
+
+    }
+    console.log('Decoded token:', decoded);
+
+    req.decoded=decoded;
+    console.log(req.decoded)
+    next()
+  })
+  
+}
+
+ const verifyAdmin= async (req, res,next)=>{
+
+  const email= req.decoded.email;
+  const query= {email: email};
+  const user = await usersCollection.findOne(query);
+  const isAdmin= user?.role === 'HR';
+  if(!isAdmin){
+    return res.status(403).send({message: 'foebidden access'})
+  }
+  next()
+ }
+
+
+
+
+
+
+
+  // jwt related api
+
+  app.post('/jwt',async(req,res)=>{
+    
+    const user= req.body;
+    const token= jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn: '10h'});
+    res.send({token})
+  })
+
+
+ 
+
+
   app.get('/user/:email',async(req,res)=>{
     const email=req.params.email
     const result = await usersCollection.findOne({email})
+    
     res.send(result)
   })
   app.get('/hr/:email',async(req,res)=>{
     const email=req.params.email
     const result = await hrCollection.findOne({email})
+   
     res.send(result)
   })
 
 
 
 
-  app.get('/assets', async(req, res) => {
+  app.get('/assets',verifyToken,verifyAdmin, async(req, res) => {
+    console.log(req.headers)
     const page=parseInt(req.query.page)
     const size=parseInt(req.query.size)
    const result = await assetCollection.find()
@@ -86,7 +144,7 @@ async function run() {
     res.send(result)
   })
 
-  app.patch('/assets/:id',async(req,res)=>{
+  app.patch('/assets/:id',verifyToken,verifyAdmin,async(req,res)=>{
     const asset=req.body;
     const id= req.params.id;
     const filter={_id:new ObjectId(id)
@@ -104,7 +162,7 @@ async function run() {
     res.send(result);
   });
 
-  app.delete('/assets/:id',async(req,res)=>{
+  app.delete('/assets/:id',verifyToken,verifyAdmin,async(req,res)=>{
     const id=  req.params.id;
     const query={_id:new ObjectId(id)}
     const result=await assetCollection.deleteOne(query);
