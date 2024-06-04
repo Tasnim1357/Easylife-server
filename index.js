@@ -277,6 +277,47 @@ app.get('/assetsCount', async(req, res) => {
     res.send(result);
   });
 
+
+  app.patch('/request/:id', async(req,res)=>{
+    const id=req.params.id;
+    const filter={_id: new ObjectId(id)}
+    const updatedRequest = req.body;
+  
+    const updateDoc={
+            $set:{
+              status1:updatedRequest.status1,
+             
+            },
+    }
+    const result=await requestCollection.updateOne(filter,updateDoc)
+    res.send(result)
+  })
+
+
+  app.patch('/assetlist/:assetId', async (req, res) => {
+    const assetId = req.params.assetId;
+    const { incrementBy } = req.body; // Expecting an increment value in the request body
+   
+    if (!ObjectId.isValid(assetId)) {
+      return res.status(400).send({ message: 'Invalid asset ID' });
+    }
+  
+    try {
+      const result = await assetCollection.updateOne(
+        { _id: new ObjectId(assetId) },
+        { $inc: { quantity: incrementBy } }
+      );
+   
+      if (result.modifiedCount > 0) {
+        res.status(200).send({ message: 'Asset quantity updated successfully' });
+      } else {
+        res.status(404).send({ message: 'Asset not found' });
+      }
+    } catch (error) {
+      res.status(500).send({ message: 'Internal Server Error', error: error.message });
+    }
+  });
+
   app.delete('/assets/:id',verifyToken,verifyAdmin,async(req,res)=>{
     const id=  req.params.id;
     const query={_id:new ObjectId(id)}
