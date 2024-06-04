@@ -110,6 +110,13 @@ async function run() {
     res.send(result)
   })
 
+  app.get('/employee/:email',async(req,res)=>{
+    const email=req.params.email
+    const result = await employeeCollection.findOne({email})
+   
+    res.send(result)
+  })
+
 
 
 
@@ -474,6 +481,78 @@ app.get('/assetsCount', async(req, res) => {
     const result=await requestCollection.updateOne(filter,updateDoc)
     res.send(result)
   })
+  app.patch('/employeename/:email', async(req,res)=>{
+    const email=req.params.email;
+    const filter={email: email}
+    const updatedRequest = req.body;
+  
+    const updateDoc={
+            $set:{
+            name: updatedRequest.name
+             
+            },
+    }
+    const result=await employeeCollection.updateOne(filter,updateDoc)
+    res.send(result)
+  })
+  app.patch('/teamname/:email', async(req,res)=>{
+    const email=req.params.email;
+    const filter={email: email}
+    const updatedRequest = req.body;
+  
+    const updateDoc={
+            $set:{
+            name: updatedRequest.name
+             
+            },
+    }
+    const result=await teamCollection.updateOne(filter,updateDoc)
+    res.send(result)
+  })
+  app.patch('/reqname/:email', async(req,res)=>{
+    const email=req.params.email;
+    const filter={userEmail: email}
+    const updatedRequest = req.body;
+  
+    const updateDoc={
+            $set:{
+            userName: updatedRequest.name
+             
+            },
+    }
+    const result=await requestCollection.updateOne(filter,updateDoc)
+    res.send(result)
+  })
+  app.patch('/hrname/:email', async(req,res)=>{
+    const email=req.params.email;
+    const filter={email: email}
+    const updatedRequest = req.body;
+  
+    const updateDoc={
+            $set:{
+            name: updatedRequest.name
+             
+            },
+    }
+    const result=await hrCollection.updateOne(filter,updateDoc)
+    res.send(result)
+  })
+  app.patch('/teamhrname/:email', async(req,res)=>{
+    const email=req.params.email;
+    const filter={adminEmail: email}
+    const updatedRequest = req.body;
+  
+    const updateDoc={
+            $set:{
+            admin: updatedRequest.name
+             
+            },
+    }
+    const result=await teamCollection.updateOne(filter,updateDoc)
+    res.send(result)
+  })
+
+
 
 
   app.patch('/assetlist/:assetId', async (req, res) => {
