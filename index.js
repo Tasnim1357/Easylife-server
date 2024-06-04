@@ -38,6 +38,7 @@ async function run() {
   const paymentCollection = client.db("assetManagement").collection("payments");
   const assetCollection = client.db("assetManagement").collection("assets");
   const requestCollection = client.db("assetManagement").collection("requested");
+  const teamCollection = client.db("assetManagement").collection("team");
 
 
 
@@ -112,6 +113,37 @@ async function run() {
 
 
 
+
+  
+  app.get('/myteam/:email',async(req,res)=>{
+    const email=req.params.email
+    const result = await teamCollection.findOne({email})
+    
+    res.send(result)
+  })
+  
+  app.get('/myteam2/:email',async(req,res)=>{
+    const email = req.params.email;
+    const { page, size } = req.query;
+    
+    // Parse page and size to integers
+    const pageNum = parseInt(page, 10);
+    const pageSize = parseInt(size, 10);
+  
+    // Build the query object
+    let query = { adminEmail: email };
+  
+    
+    try {
+      const skip = pageNum * pageSize; // Calculate the number of documents to skip
+      const result = await teamCollection.find(query).skip(skip).limit(pageSize).toArray();
+      res.send(result);
+    } catch (error) {
+      res.status(500).send({ message: 'Internal Server Error', error });
+    }
+  })
+
+
   app.get('/assets',verifyToken,verifyAdmin, async(req, res) => {
     console.log(req.headers)
     const page=parseInt(req.query.page)
@@ -123,11 +155,45 @@ async function run() {
      res.send(result);
  })
 
+  app.get('/employees',verifyToken,verifyAdmin, async(req, res) => {
+    console.log(req.headers)
+    const page=parseInt(req.query.page)
+    const size=parseInt(req.query.size)
+   const result = await employeeCollection.find()
+   .skip(page*size)
+   .limit(size)
+   .toArray();
+     res.send(result);
+ })
 
-//  app.get('/assets/emp',async(req,res)=>{
-//   const result=await assetCollection.find().toArray()
+
+//  app.get('/requests',async(req,res)=>{
+//   const result=await requestCollection.find().toArray()
 //   res.send(result)
 // })
+
+
+app.get('/requests', async (req, res) => {
+  const { name, email } = req.query;
+
+  // Build the query object
+  let query = {};
+
+  if (name) {
+    query.userName = { $regex: name, $options: 'i' }; // Case-insensitive regex search
+  }
+
+  if (email) {
+    query.userEmail = { $regex: email, $options: 'i' }; // Case-insensitive regex search
+  }
+
+  try {
+    const result = await requestCollection.find(query).toArray();
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: 'Internal Server Error', error });
+  }
+});
 
 app.get('/request/:email', async (req, res) => {
   const email = req.params.email;
@@ -162,6 +228,29 @@ app.get('/request/:email', async (req, res) => {
 });
 
 
+
+app.get('/team/:email', async (req, res) => {
+  const email = req.params.email;
+  const { page, size } = req.query;
+  
+  // Parse page and size to integers
+  const pageNum = parseInt(page, 10);
+  const pageSize = parseInt(size, 10);
+
+  // Build the query object
+  let query = { adminEmail: email };
+
+  
+  try {
+    const skip = pageNum * pageSize; // Calculate the number of documents to skip
+    const result = await teamCollection.find(query).skip(skip).limit(pageSize).toArray();
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: 'Internal Server Error', error });
+  }
+});
+
+
 app.get('/requestCount', async(req, res) => {
   const { search, type, status } = req.query;
   let query = {};
@@ -171,6 +260,19 @@ app.get('/requestCount', async(req, res) => {
   }
   if (type) {
     query.type = type;
+  }
+  const count = await requestCollection.estimatedDocumentCount(query);
+  res.send({count});
+})
+app.get('/requestsCount', async(req, res) => {
+  const { search, email, status } = req.query;
+  let query = {};
+
+  if (search) {
+    query.userName = { $regex: search, $options: 'i' }; // Case-insensitive regex search
+  }
+  if (email) {
+    query.userEmail = { $regex: email, $options: 'i' }; // Case-insensitive regex search
   }
   const count = await requestCollection.estimatedDocumentCount(query);
   res.send({count});
@@ -235,6 +337,10 @@ app.get('/assetsCount', async(req, res) => {
   const count = await assetCollection.estimatedDocumentCount();
   res.send({count});
 })
+ app.get('/teamCount', async(req, res) => {
+  const count = await teamCollection.estimatedDocumentCount();
+  res.send({count});
+})
 
 
   app.get('/assets/:id',async(req,res) => {
@@ -256,6 +362,11 @@ app.get('/assetsCount', async(req, res) => {
     const newRequest=req.body
     console.log(newRequest)
     const result=await requestCollection.insertOne(newRequest)
+    res.send(result)
+  })
+  app.post('/team', async(req, res) => {
+    const newTeam=req.body
+    const result=await teamCollection.insertOne(newTeam)
     res.send(result)
   })
 
@@ -286,6 +397,77 @@ app.get('/assetsCount', async(req, res) => {
     const updateDoc={
             $set:{
               status1:updatedRequest.status1,
+             
+            },
+    }
+    const result=await requestCollection.updateOne(filter,updateDoc)
+    res.send(result)
+  })
+  
+  app.patch('/hr/:email', async (req, res) => {
+    const email = req.params.email;
+    const { memberCount3 } = req.body; // Expecting an increment value in the request body
+   
+  
+    try {
+      const result = await hrCollection.updateOne(
+        { email:email },
+        { $inc: { memberCount: memberCount3 } }
+      );
+   
+      if (result.modifiedCount > 0) {
+        res.status(200).send({ message: 'membercount updated successfully' });
+      } else {
+        res.status(404).send({ message: 'member count not found' });
+      }
+    } catch (error) {
+      res.status(500).send({ message: 'Internal Server Error', error: error.message });
+    }
+  });
+  app.patch('/hr/:email', async (req, res) => {
+    const email = req.params.email;
+    const { memberCount3 } = req.body; // Expecting an increment value in the request body
+   
+  
+    try {
+      const result = await hrCollection.updateOne(
+        { email:email },
+        { $inc: { memberCount: memberCount3 } }
+      );
+   
+      if (result.modifiedCount > 0) {
+        res.status(200).send({ message: 'membercount updated successfully' });
+      } else {
+        res.status(404).send({ message: 'member count not found' });
+      }
+    } catch (error) {
+      res.status(500).send({ message: 'Internal Server Error', error: error.message });
+    }
+  });
+  app.patch('/employee/:id', async(req,res)=>{
+    const id=req.params.id;
+    const filter={_id: new ObjectId(id)}
+    const updatedEmployee = req.body;
+  
+    const updateDoc={
+            $set:{
+             company: updatedEmployee.company,
+             logo: updatedEmployee.logo
+             
+            },
+    }
+    const result=await employeeCollection.updateOne(filter,updateDoc)
+    res.send(result)
+  })
+  app.patch('/requesthr/:id', async(req,res)=>{
+    const id=req.params.id;
+    const filter={_id: new ObjectId(id)}
+    const updatedRequest = req.body;
+  
+    const updateDoc={
+            $set:{
+              status1:updatedRequest.status1,
+              approvalDate: updatedRequest.approvalDate
              
             },
     }
@@ -329,6 +511,13 @@ app.get('/assetsCount', async(req, res) => {
     const id=  req.params.id;
     const query={_id:new ObjectId(id)}
     const result=await requestCollection.deleteOne(query);
+    res.send(result)
+
+  })
+  app.delete('/team/:id',async(req,res)=>{
+    const id=  req.params.id;
+    const query={_id:new ObjectId(id)}
+    const result=await teamCollection.deleteOne(query);
     res.send(result)
 
   })
@@ -422,13 +611,7 @@ clientSecret: paymentIntent.client_secret
     const payment=req.body;
     const paymentResult= await paymentCollection.insertOne(payment);
 
-    // carefully delete each item from the cart
-    // console.log('payment info',payment);
-  
-    // const query= {_id:{
-    //   $in: payment.cartIds.map(id=> new ObjectId(id))
-    // }};
-    // const deleteResult= await cartCollection.deleteMany(query)
+ 
     res.send(paymentResult)
   })
 
