@@ -30,7 +30,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
   const usersCollection= client.db('assetManagement').collection('users')
   const employeeCollection= client.db('assetManagement').collection('employees')
@@ -180,7 +180,7 @@ async function run() {
 // })
 
 
-app.get('/requests', async (req, res) => {
+app.get('/requests', verifyToken, verifyAdmin, async (req, res) => {
   const { name, email } = req.query;
 
   // Build the query object
@@ -291,7 +291,7 @@ app.get('/requestsCount', async(req, res) => {
 
 
 
-app.get('/assets/emp', async (req, res) => {
+app.get('/assets/emp',async (req, res) => {
   const { search, type, status } = req.query;
   const page = parseInt(req.query.page);
   const size = parseInt(req.query.size);
@@ -346,6 +346,10 @@ app.get('/assetsCount', async(req, res) => {
 })
  app.get('/teamCount', async(req, res) => {
   const count = await teamCollection.estimatedDocumentCount();
+  res.send({count});
+})
+ app.get('/employeeCount', async(req, res) => {
+  const count = await employeeCollection.estimatedDocumentCount();
   res.send({count});
 })
 
@@ -466,7 +470,7 @@ app.get('/assetsCount', async(req, res) => {
     const result=await employeeCollection.updateOne(filter,updateDoc)
     res.send(result)
   })
-  app.patch('/requesthr/:id', async(req,res)=>{
+  app.patch('/requesthr/:id',verifyToken,verifyAdmin, async(req,res)=>{
     const id=req.params.id;
     const filter={_id: new ObjectId(id)}
     const updatedRequest = req.body;
@@ -479,6 +483,20 @@ app.get('/assetsCount', async(req, res) => {
             },
     }
     const result=await requestCollection.updateOne(filter,updateDoc)
+    res.send(result)
+  })
+  app.patch('/hrpack/:email', async(req,res)=>{
+    const email=req.params.email;
+    const filter={email: email}
+    const updatedRequest = req.body;
+  
+    const updateDoc={
+            $set:{
+            package1: updatedRequest.plan
+             
+            },
+    }
+    const result=await hrCollection.updateOne(filter,updateDoc)
     res.send(result)
   })
   app.patch('/employeename/:email', async(req,res)=>{
@@ -509,7 +527,7 @@ app.get('/assetsCount', async(req, res) => {
     const result=await teamCollection.updateOne(filter,updateDoc)
     res.send(result)
   })
-  app.patch('/reqname/:email', async(req,res)=>{
+  app.patch('/reqname/:email', verifyToken, async(req,res)=>{
     const email=req.params.email;
     const filter={userEmail: email}
     const updatedRequest = req.body;
@@ -555,7 +573,7 @@ app.get('/assetsCount', async(req, res) => {
 
 
 
-  app.patch('/assetlist/:assetId', async (req, res) => {
+  app.patch('/assetlist/:assetId',verifyToken, async (req, res) => {
     const assetId = req.params.assetId;
     const { incrementBy } = req.body; // Expecting an increment value in the request body
    
@@ -703,7 +721,7 @@ clientSecret: paymentIntent.client_secret
 
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
