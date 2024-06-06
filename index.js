@@ -174,10 +174,10 @@ async function run() {
  })
 
 
-//  app.get('/requests',async(req,res)=>{
-//   const result=await requestCollection.find().toArray()
-//   res.send(result)
-// })
+ app.get('/employees1',async(req,res)=>{
+  const result=await employeeCollection.find().toArray()
+  res.send(result)
+})
 
 
 app.get('/requests', verifyToken, verifyAdmin, async (req, res) => {
@@ -233,6 +233,86 @@ app.get('/request/:email', async (req, res) => {
     res.status(500).send({ message: 'Internal Server Error', error });
   }
 });
+
+
+app.get('/topmost-requests', async (req, res) => {
+  try {
+    // Aggregate to count the number of requests for each assetId
+    const aggregationPipeline = [
+      { $group: { _id: "$assetId", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 4 } 
+    ];
+
+    const topmostRequests = await requestCollection.aggregate(aggregationPipeline).toArray();
+
+    // Extract the assetIds of the topmost requested items
+    const topmostAssetIds = topmostRequests.map(request => request._id);
+
+    // Retrieve the details of the topmost requested items based on their assetId
+    const topmostRequestDetails = await requestCollection.find({ assetId: { $in: topmostAssetIds } }).toArray();
+
+    // Filter out any additional items that may have the same assetId but were not part of the top 4
+    const filteredTopmostRequestDetails = topmostRequestDetails.filter((request, index) => index < 4);
+
+    res.json(filteredTopmostRequestDetails);
+  } catch (error) {
+    console.error("Error retrieving topmost request details:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+app.get('/api/requests/pending', async (req, res) => {
+  try {
+    const pendingRequests = await requestCollection.find({ status1: 'pending' }).limit(5).toArray();
+    res.json(pendingRequests);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/requests/limited-stock', async (req, res) => {
+  try {
+    const limitedStockItems = await requestCollection.find({ 'quantity': { $lt: 10 } }).toArray();
+    res.json(limitedStockItems);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+app.get('/api/requests/pie-chart', async (req, res) => {
+  try {
+    const totalRequests = await requestCollection.countDocuments();
+    const returnableRequests = await requestCollection.countDocuments({ type: 'returnable' });
+    const nonReturnableRequests = totalRequests - returnableRequests;
+
+    // const pieChartData = {
+    //   returnable: (returnableRequests / totalRequests),
+    //   nonReturnable: (nonReturnableRequests / totalRequests),
+    // };
+
+    const pieChartData=[
+      {
+        name: 'Returnable',
+        value:  (returnableRequests / totalRequests),
+      },
+      {
+        name: 'Non-returnable',
+        value: (nonReturnableRequests / totalRequests)
+      }
+
+    ]
+
+    res.json(pieChartData);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
 
 
 
