@@ -57,7 +57,7 @@ async function run() {
       return res.status(401).send({message: 'forbidden access'})
 
     }
-    console.log('Decoded token:', decoded);
+ 
 
     req.decoded=decoded;
     console.log(req.decoded)
@@ -313,6 +313,70 @@ app.get('/api/requests/pie-chart', async (req, res) => {
 
 
 
+app.get('/pending-requests/:userEmail', async (req, res) => {
+  const userEmail = req.params.userEmail;
+
+  try {
+    // Query to find pending requests for the given userEmail
+    const pendingRequests = await requestCollection.find({
+      userEmail: userEmail,
+      status1: 'pending'
+    }).toArray();
+
+    res.json(pendingRequests);
+  } catch (error) {
+    console.error('Error retrieving pending requests:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+
+
+app.get('/pending-requests/:userEmail', async (req, res) => {
+  const userEmail = req.params.userEmail;
+
+  try {
+
+    const pendingRequests = await requestCollection.find({
+      userEmail: userEmail,
+      status1: 'pending'
+    }).toArray();
+
+    res.json(pendingRequests);
+  } catch (error) {
+    console.error('Error retrieving pending requests:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+app.get('/monthly-requests/:userEmail', async (req, res) => {
+  const userEmail = req.params.userEmail;
+  const currentDate = new Date();
+  const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+
+  try {
+
+    const monthlyRequests = await requestCollection.find({
+      userEmail: userEmail,
+      requestDate: {
+        $gte: startOfMonth.toISOString(),
+        $lte: endOfMonth.toISOString()
+      }
+    }).sort({ requestDate: -1 }).toArray();
+
+
+    res.json(monthlyRequests);
+  } catch (error) {
+    console.error('Error retrieving monthly requests:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 
 
@@ -324,12 +388,12 @@ app.get('/team/:email', async (req, res) => {
   const pageNum = parseInt(page, 10);
   const pageSize = parseInt(size, 10);
 
-  // Build the query object
+
   let query = { adminEmail: email };
 
   
   try {
-    const skip = pageNum * pageSize; // Calculate the number of documents to skip
+    const skip = pageNum * pageSize; 
     const result = await teamCollection.find(query).skip(skip).limit(pageSize).toArray();
     res.send(result);
   } catch (error) {
@@ -343,7 +407,7 @@ app.get('/requestCount', async(req, res) => {
   let query = {};
 
   if (search) {
-    query.name = { $regex: search, $options: 'i' }; // Case-insensitive regex search
+    query.name = { $regex: search, $options: 'i' };
   }
   if (type) {
     query.type = type;
